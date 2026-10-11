@@ -1,3 +1,5 @@
+import { QuestionVisual } from './QuestionVisual';
+import { parseSharedRecord, sharePath, shareTitle as recordTitle, shareDescription, shareLabel } from './share';
 import { PwaControls } from './PwaControls';
 import { createRoundClock, formatTime, QUESTION_SECONDS } from './round-clock';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,6 +18,7 @@ export default function App() {
   const activeQuestionId = useRef<string | null>(null);
   const transition = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notice, setNotice] = useState('');
+  const [cardUnavailable, setCardUnavailable] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const [initialHistory] = useState(readHistory);
   const recent = useRef<string[]>(initialHistory);
@@ -35,7 +38,7 @@ export default function App() {
     const first = nextQuestion([], Math.random, recent.current);
     if (first) recent.current = rememberQuestion(recent.current, first.id);
     activeQuestionId.current = first?.id ?? null;
-    setResponses([]); setQuestion(first); setNotice(''); setFeedback(null);
+    setCardUnavailable(false); setResponses([]); setQuestion(first); setNotice(''); setFeedback(null);
     clock.current = createRoundClock(); setRemaining(QUESTION_SECONDS); setScreen('quiz');
   }
   const submit = useCallback((answer: number | null, skip = false) => {
@@ -80,8 +83,10 @@ export default function App() {
   }, [screen, question, feedback, submit]);
   useEffect(() => () => { if (transition.current) clearTimeout(transition.current); }, []);
   const summary = result(responses);
-  const shareUrl = window.location.origin;
-  const shareTitle = summary.supported ? `나의 과학 나이는 ${summary.label}!` : '나의 과학 도전 기록';
+  const shared = parseSharedRecord(window.location.pathname);
+  const sharedRecord = { grade: summary.grade, score: summary.score, seconds: Math.min(200, Math.round(summary.elapsedMs / 1000)) };
+  const shareUrl = new URL(sharePath(sharedRecord), window.location.origin).href;
+  const shareTitle = recordTitle(sharedRecord);
   const shareText = `${shareTitle} 10문제 중 ${summary.score}개 정답 · ${formatTime(summary.elapsedMs)}. 도전하기: ${shareUrl}`;
   async function share() {
     try {
@@ -99,6 +104,7 @@ export default function App() {
     <header><a className="brand" href="/" aria-label="몇 학년 홈"><span className="brand-mark">몇</span>몇 학년<span className="brand-dot">?</span></a><span className="header-tag">작은 도전, 새로운 발견</span></header>
     <main>
       {screen === 'intro' && <div className="intro">
+        {shared && <aside className="shared-result"><span>친구의 과학 도전</span><strong>{shareLabel(shared)}</strong><p>{shareDescription(shared)}</p><small>공유자가 보낸 결과예요. 실제 학년이나 능력을 의미하지 않아요.</small></aside>}
         <section className="intro-copy"><span className="eyebrow">20-SECOND CHALLENGE · 과학 편</span>
           <h1 ref={heading} tabIndex={-1}>당신의 과학 나이는<br /><span>몇 학년?</span></h1>
 
@@ -120,6 +126,7 @@ export default function App() {
         </div>
         <span className="domain-tag">{question.domain} · {question.kind}</span><span className="question-label">QUESTION {String(responses.length + 1).padStart(2, '0')}</span>
         <h1 className="question" ref={heading} tabIndex={-1}>{question.prompt}</h1>
+        <QuestionVisual question={question} />
         <p className="question-help" id="choice-help">보기를 누르면 답이 확정돼요.</p>
         <div className="choices" role="group" aria-label="답 선택" aria-describedby="choice-help">{question.choices.map((choice, i) => <button key={`${question.id}-${i}`} className={`choice ${feedback?.selected === i ? feedback.right ? 'answered-right' : 'answered-wrong' : ''}`} disabled={feedback !== null} onClick={() => submit(i)}><span className="choice-number">{i + 1}</span><span className="choice-text">{choice}</span>{feedback?.selected === i && <span className="answer-mark">{feedback.right ? feedback.streak >= 3 ? `✓ ${feedback.streak}연속!` : '✓ 정답!' : '아깝다!'}</span>}</button>)}</div>
         <button className="skip" disabled={feedback !== null} onClick={() => submit(null, true)}>건너뛰기</button>
@@ -134,6 +141,7 @@ export default function App() {
         {summary.skips > 0 && <p className="fine center">건너뛴 문제 {summary.skips}개 · 정답과 해설을 확인해보세요.</p>}
         {summary.timeouts > 0 && <p className="fine center">시간 초과 {summary.timeouts}문제 · 이번엔 조금 더 빠르게!</p>}
         <div className="domain-results" aria-label="영역별 정답">{summary.domains.map(d => <div key={d.domain}><span>{d.domain}</span><strong>{d.score}<small> / {d.total}</small></strong></div>)}</div>
+        <figure className="share-card">{cardUnavailable ? <p className="fine center">결과 카드는 인터넷에 연결된 서비스에서 내려받을 수 있어요.</p> : <><img onError={() => setCardUnavailable(true)} src={sharePath(sharedRecord).replace("/share/", "/share-card/") + ".png"} alt={shareTitle + " · " + shareDescription(sharedRecord)} width="800" height="420" /><figcaption><a href={sharePath(sharedRecord).replace("/share/", "/share-card/") + ".png"} download="science-result.png">결과 카드 내려받기 ↓</a></figcaption></>}</figure>
         <div className="result-actions"><button className="primary" onClick={start}>다시 도전하기 ↻</button><button className="secondary" onClick={share}>자랑하기 ↗</button></div><p className="notice" role="status">{notice}</p>
         {notice.startsWith('공유하지') && <textarea className="share-fallback" readOnly value={shareText} aria-label="복사할 결과 문구" onFocus={e => e.target.select()} />}
         <details className="review"><summary className="review-heading">정답 확인 <span>{TOTAL}문제</span></summary><div>{responses.map((response, i) => <details key={response.question.id}><summary><span className={correct(response) ? 'right' : 'wrong'}>{correct(response) ? '✓' : '−'}</span><span>{i + 1}. {response.question.prompt}</span><span className="expand">＋</span></summary><div className="explanation"><p className="review-meta">{response.question.domain} · {response.question.concept} · {response.question.kind}</p><p>내 답: {response.selected === null ? (response.timedOut ? '시간 초과' : '건너뛰기') : response.question.choices[response.selected]}</p><p><strong>정답: {response.question.choices[response.question.answer]}</strong></p><p>{response.question.explanation}</p></div></details>)}</div></details>

@@ -4,6 +4,12 @@
   "compatibility_date": "2026-10-11",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/share/*",
+      "/share-card/*"
+    ]
+  },
+  "main": "worker/index.ts"
 }

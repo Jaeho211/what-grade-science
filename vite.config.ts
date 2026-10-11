@@ -18,5 +18,6 @@ export default defineConfig({ plugins: [react(), VitePWA({
     globPatterns: ['**/*.{js,css,html,png,svg}'],
     
     cleanupOutdatedCaches: true,
+    navigateFallbackDenylist: [/^\/share\//, /^\/share-card\//],
   },
 })] });

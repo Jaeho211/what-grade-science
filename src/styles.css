@@ -200,3 +200,25 @@ summary { min-height: 56px; font-size: 15px; }
 .record-stats small { display: block; color: #6b7c75; margin-top: 4px; }
 .evidence-note { text-align: center; font-size: 13px; line-height: 1.8; color: #38634f; }
 @media (max-width: 480px) { .record-actions { flex-wrap: wrap; } .records-panel .fine { font-size: 12px; } }
+
+.question-visual { margin: 16px auto; max-width: 420px; padding: 10px; border-radius: 16px; background: #f6f8f7; }
+.question-visual svg { display: block; width: 100%; max-height: 170px; }
+.question-visual text { font: 16px system-ui, sans-serif; text-anchor: middle; fill: #285943; }
+.question-visual figcaption { text-align: center; color: #657062; font-size: 12px; }
+.shared-result { grid-column: 1 / -1; padding: 20px; border: 1px solid #dce9df; border-radius: 20px; background: #f6f8f7; }
+.shared-result strong { display: block; font-size: 28px; color: #285943; margin: 8px 0; }
+.shared-result p, .shared-result small { color: #657062; }
+.share-card { max-width: 540px; margin: 24px auto; }
+.share-card img { width: 100%; height: auto; display: block; border-radius: 18px; border: 1px solid #dce9df; }
+.share-card figcaption { text-align: center; padding: 12px; font-size: 14px; }
+.share-card a { color: #285943; }
+@media (max-width: 600px) {
+  .quiz.panel { padding: 20px 16px; }
+  .question-visual { margin: 12px auto; }
+  .question { font-size: 22px; }
+  .choices { gap: 10px; }
+  .choice { min-height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
