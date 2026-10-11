@@ -47,5 +47,7 @@ describe('question visuals', () => {
     for (const svg of rendered) { expect(svg).toContain('role="img"'); expect(svg).toContain('aria-label='); expect(svg).not.toContain('정답'); }
     expect(rendered.join('')).toContain('80cm');
     expect(rendered.join('')).toContain('왼쪽 5N');
+    const sameDirection = questions.find(q => q.prompt.includes('오른쪽 4N과 오른쪽 7N'))!;
+    expect(renderToStaticMarkup(<QuestionVisual question={sameDirection} />)).toBe('');
   });
 });

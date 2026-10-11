@@ -12,10 +12,10 @@ function play(mask: number, elapsedMs = 12000, random = () => 0.5) {
 }
 
 describe('science question bank', () => {
-  it('has 84 unique, complete, four-choice questions across all four domains', () => {
-    expect(questions).toHaveLength(84);
-    expect(new Set(questions.map(q => q.id)).size).toBe(84);
-    expect(new Set(questions.map(q => q.prompt)).size).toBe(84);
+  it('has 106 unique, complete, four-choice questions across all four domains', () => {
+    expect(questions).toHaveLength(106);
+    expect(new Set(questions.map(q => q.id)).size).toBe(106);
+    expect(new Set(questions.map(q => q.prompt)).size).toBe(106);
     expect(new Set(questions.map(q => q.domain))).toEqual(new Set(DOMAINS));
     for (const q of questions) {
       expect(q.choices).toHaveLength(4);
@@ -29,7 +29,7 @@ describe('science question bank', () => {
       expect(q.curriculumReview).toBe('학년군 대조');
     }
     for (let level = 3; level <= 9; level++) for (const domain of DOMAINS) {
-      expect(questions.filter(q => q.level === level && q.domain === domain)).toHaveLength(3);
+      expect(questions.filter(q => q.level === level && q.domain === domain).length).toBeGreaterThanOrEqual(3);
     }
   });
   it('preserves the correct answer when shuffling', () => {

@@ -7,6 +7,8 @@ const descriptions: Record<string, string> = {
   '속력 그래프 해석': '속력: 0초 2m/s, 1초 4m/s, 2초 6m/s, 3초 8m/s.',
 };
 export function QuestionVisual({ question }: { question: Question }) {
+  // This diagram describes the original opposite-direction force scenario only.
+  if (question.concept === '힘의 합력' && !question.prompt.includes('오른쪽 8N, 왼쪽 5N')) return null;
   const description = descriptions[question.concept];
   if (!description) return null;
   return <figure className="question-visual"><svg viewBox="0 0 360 170" role="img" aria-label={description}>
