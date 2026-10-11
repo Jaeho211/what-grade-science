@@ -5,26 +5,49 @@ export const TOTAL = 10;
 export const START_LEVEL = 5;
 export const MIN_LEVEL = 3;
 export const MAX_LEVEL = 9;
-export const GRADING_VERSION = 'science-evidence-v2';
+export const GRADING_VERSION = 'science-evidence-v3';
 export const correct = (r: Response) => !r.timedOut && !r.skipped && r.selected === r.question.answer;
 export const levelLabel = (level: number) => level <= 6 ? `초등 ${level}학년` : `중학교 ${level - 6}학년`;
 
+// Timing accelerates exploration, never the final evidence-based grade.
+const fastCorrect = (r: Response) => correct(r) && r.elapsedMs !== undefined
+  && Number.isFinite(r.elapsedMs) && r.elapsedMs >= 1000 && r.elapsedMs <= r.question.expectedMs / 2;
 export function targetGrade(responses: Response[]): number {
-  let level = START_LEVEL;
-  for (let i = 1; i < Math.min(responses.length, 6); i += 2) {
+  let level = START_LEVEL, streak = 0, hadMiss = false, recoveryUsed = false;
+  for (let i = 0; i < Math.min(responses.length, 6); i++) {
+    if (correct(responses[i])) streak++;
+    else { streak = 0; hadMiss = true; }
+    if (i % 2 === 0) continue;
     const pair = responses.slice(i - 1, i + 1);
-    const fast = pair.every(r => correct(r) && (r.elapsedMs ?? Infinity) >= 1000 && r.elapsedMs! <= r.question.expectedMs / 2);
-    if (pair.every(correct)) level = Math.min(MAX_LEVEL, level + (fast ? 2 : 1));
+    const accelerated = pair[0].question.level === pair[1].question.level && pair.every(fastCorrect);
+    if (pair.every(correct)) level = Math.min(MAX_LEVEL, level + (accelerated ? 2 : 1));
     else if (pair.every(r => !correct(r))) level = Math.max(MIN_LEVEL, level - 1);
-  }
-  // Last four questions verify the reached level; a strong opening unlocks a challenge.
-  if (responses.length >= 6) {
-    if (responses.slice(3, 6).every(correct)) level = Math.min(MAX_LEVEL, level + 1);
-    for (let i = 7; i < responses.length; i += 2) {
-      if (responses.slice(i - 1, i + 1).every(r => !correct(r))) level = Math.max(MIN_LEVEL, level - 1);
+    if (hadMiss && !recoveryUsed && streak >= 3) {
+      if (!accelerated) level = Math.min(MAX_LEVEL, level + 1);
+      recoveryUsed = true;
     }
   }
-  return level;
+  // Question seven is a checkpoint: one opening miss must not lock a strong
+  // player at middle one. This offers a challenge; it is not a grade award.
+  if (responses.length >= 6) {
+    const openingHits = responses.slice(0, 6).filter(correct).length;
+    if (openingHits >= 5) level = Math.max(level, openingHits === 6 ? MAX_LEVEL : 8);
+  }
+  if (responses.length <= 6) return level;
+  const checkpoint = responses[6];
+  let confirmation = checkpoint.question.level;
+  if (confirmation >= 8 && correct(checkpoint) && responses.slice(4, 7).every(correct)) {
+    confirmation = Math.min(MAX_LEVEL, confirmation + 1);
+  }
+  // Preserve the checkpoint opportunity even after one miss. Two misses at
+  // the confirmation level lower it; successes then supply direct evidence.
+  for (let i = 7; i < responses.length; i++) {
+    const pair = responses.slice(i - 1, i + 1);
+    if (pair.every(r => r.question.level === confirmation && !correct(r))) {
+      confirmation = Math.max(MIN_LEVEL, confirmation - 1);
+    }
+  }
+  return confirmation;
 }
 
 export function nextQuestion(responses: Response[], random = Math.random, recentIds: readonly string[] = []): Question | undefined {
