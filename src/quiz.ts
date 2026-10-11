@@ -26,7 +26,7 @@ export function targetGrade(responses: Response[]): number {
   return level;
 }
 
-export function nextQuestion(responses: Response[], random = Math.random): Question | undefined {
+export function nextQuestion(responses: Response[], random = Math.random, recentIds: readonly string[] = []): Question | undefined {
   if (responses.length >= TOTAL) return undefined;
   const used = new Set(responses.map(r => r.question.id));
   const remaining = questions.filter(q => !used.has(q.id));
@@ -36,7 +36,15 @@ export function nextQuestion(responses: Response[], random = Math.random): Quest
   const balanced = remaining.filter(q => count(q.domain) === minimum);
   const target = targetGrade(responses);
   const distance = Math.min(...balanced.map(q => Math.abs(q.level - target)));
-  const pool = balanced.filter(q => Math.abs(q.level - target) === distance);
+  const atLevel = balanced.filter(q => Math.abs(q.level - target) === distance);
+  const recent = new Map(recentIds.map((id, i) => [id, i]));
+  const fresh = atLevel.filter(q => !recent.has(q.id));
+  // Never trade the target difficulty or domain balance for novelty.
+  const oldest = fresh.length ? -1 : Math.min(...atLevel.map(q => recent.get(q.id) ?? -1));
+  const eligible = fresh.length ? fresh : atLevel.filter(q => (recent.get(q.id) ?? -1) === oldest);
+  const attempts = (q: Question) => responses.filter(r => r.question.concept === q.concept).length;
+  const leastAttempts = Math.min(...eligible.map(attempts));
+  const pool = eligible.filter(q => attempts(q) === leastAttempts);
   const q = pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
   if (!q) return undefined;
   const order = q.choices.map((_, i) => i);

@@ -2,6 +2,7 @@ import { PwaControls } from './PwaControls';
 import { createRoundClock, formatTime, QUESTION_SECONDS } from './round-clock';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { correct, nextQuestion, result, streakStats, TOTAL, type Question, type Response } from './quiz';
+import { normalizeHistory, readHistory, rememberQuestion } from './history';
 
 export default function App() {
   const [screen, setScreen] = useState<'intro' | 'quiz' | 'result'>('intro');
@@ -14,13 +15,18 @@ export default function App() {
   const transition = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notice, setNotice] = useState('');
   const heading = useRef<HTMLHeadingElement>(null);
+  const [initialHistory] = useState(readHistory);
+  const recent = useRef<string[]>(initialHistory);
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [screen, question]);
   function start() {
     if (transition.current) clearTimeout(transition.current);
-    const first = nextQuestion([]);
+    const stored = readHistory();
+    recent.current = normalizeHistory([...stored, ...recent.current]);
+    const first = nextQuestion([], Math.random, recent.current);
+    if (first) recent.current = rememberQuestion(recent.current, first.id);
     activeQuestionId.current = first?.id ?? null;
     setResponses([]); setQuestion(first); setNotice(''); setFeedback(null);
     clock.current = createRoundClock(); setRemaining(QUESTION_SECONDS); setScreen('quiz');
@@ -35,7 +41,8 @@ export default function App() {
       setResponses(updated); setFeedback(null);
       if (updated.length === TOTAL) { activeQuestionId.current = null; clock.current = null; setScreen('result'); }
       else {
-        const next = nextQuestion(updated);
+        const next = nextQuestion(updated, Math.random, recent.current);
+        if (next) recent.current = rememberQuestion(recent.current, next.id);
         activeQuestionId.current = next?.id ?? null;
         clock.current = createRoundClock(); setRemaining(QUESTION_SECONDS); setQuestion(next);
       }
@@ -82,7 +89,7 @@ export default function App() {
           <p className="lead">알고 있던 과학, 20초 안에 설명할 수 있을까?<br />10문제로 나의 과학 나이를 확인해보세요.</p>
           <div className="chips"><span>✦ 초등 3학년~중3</span><span>◷ 문제마다 20초</span><span>↗ 로그인 없이</span></div>
           <button className="primary start" onClick={start}>도전 시작 <span>→</span></button>
-          <p className="fine">물리 · 화학 · 생명 · 지구과학, 골고루 도전해요.</p>
+          <p className="fine">물리 · 화학 · 생명 · 지구과학, 골고루 도전해요.<br />최근에 본 문제는 덜 나오도록 골라요.</p>
         </section>
         <section className="illustration" aria-label="과학 도전 노트"><div className="orbit one">N</div><div className="orbit two">⚗</div><div className="orbit three">☾</div><div className="notebook"><div className="note-top">TODAY’S LITTLE CHALLENGE <span>✦</span></div><div className="note-question">자석을 반으로 자르면?</div><div className="equation">N ━ S</div><div className="note-lines"><i /><i /><i /></div><div className="note-bottom"><span>N극만 남을까?</span><span>↗</span></div></div><div className="sticker">딱 10문제!</div></section>
         <section className="how"><div><b>01</b><span>빠르게 풀고</span><p>내 답에 맞춰 달라지는 문제</p></div><div><b>02</b><span>과학 나이 확인</span><p>나는 과연 몇 학년일까?</p></div><div><b>03</b><span>친구에게 도전장</span><p>친구는 몇 학년으로 나올까?</p></div></section>
@@ -104,7 +111,7 @@ export default function App() {
       </section>}
       {screen === 'result' && <section className="results">
         <div className="result-hero"><span className="eyebrow">YOUR SCIENCE MOMENT</span><div className="result-icon">✦</div><h1 ref={heading} tabIndex={-1}>당신의 과학 나이는</h1><p className="grade">{summary.label}</p><p className="lead">{summary.supported ? '여러 영역의 정답으로 확인한 이번 도전 결과예요.' : '학년을 정할 정답 근거가 부족해요. 한 번 더 도전해볼까요?'}</p><span className="score">10문제 중 {summary.score}개 정답 · {formatTime(summary.elapsedMs)}</span><p className="fine">재미로 보는 과학 나이예요. 실제 학년이나 과학 능력을 의미하지 않아요.</p></div>
-        <p className="fine center">{summary.supported ? '문항의 학년 배치는 초기 기준이에요. 교육과정 대조와 플레이 검증으로 다듬고 있어요.' : '서로 다른 세 영역의 정답과 해당 수준의 정답이 더 필요해요.'}</p>
+        <p className="fine center">{summary.supported ? '이번에 푼 문제 기준이에요. 다른 문제에 도전하면 결과가 달라질 수 있어요.' : '서로 다른 세 영역의 정답과 해당 수준의 정답이 더 필요해요.'}</p>
         <p className="best-streak">✨ 최고 연속 정답 <strong>{summary.bestStreak}회</strong></p>
         {summary.skips > 0 && <p className="fine center">건너뛴 문제 {summary.skips}개 · 정답과 해설을 확인해보세요.</p>}
         {summary.timeouts > 0 && <p className="fine center">시간 초과 {summary.timeouts}문제 · 이번엔 조금 더 빠르게!</p>}
