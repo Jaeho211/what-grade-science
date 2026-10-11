@@ -58,15 +58,9 @@ export function nextQuestion(responses: Response[], random = Math.random, recent
   if (responses.length >= TOTAL) return undefined;
   const used = new Set(responses.map(r => r.question.id));
   const remaining = questions.filter(q => !used.has(q.id));
-  const count = (domain: string) => responses.filter(r => r.question.domain === domain).length;
-  const minimum = Math.min(...DOMAINS.map(count));
-  // Domain balance comes first: every domain appears twice in the first eight questions.
-  // Keep two questions per domain, then reserve one bonus slot for physics.
-  const physicsBonus = responses.length >= 8 && count('물리') < 3;
-  const balanced = remaining.filter(q => physicsBonus ? q.domain === '물리' : count(q.domain) === minimum);
   const target = targetGrade(responses);
-  const distance = Math.min(...balanced.map(q => Math.abs(q.level - target)));
-  let atLevel = balanced.filter(q => Math.abs(q.level - target) === distance);
+  const distance = Math.min(...remaining.map(q => Math.abs(q.level - target)));
+  let atLevel = remaining.filter(q => Math.abs(q.level - target) === distance);
   if (responses.length >= 6) {
     const directDomains = new Set(responses.filter(r => correct(r) && r.question.level >= target).map(r => r.question.domain));
     const needsEvidence = atLevel.filter(q => !directDomains.has(q.domain));
@@ -77,16 +71,22 @@ export function nextQuestion(responses: Response[], random = Math.random, recent
   }
   const recent = new Map(recentIds.map((id, i) => [id, i]));
   const fresh = atLevel.filter(q => !recent.has(q.id));
-  // Never trade the target difficulty or domain balance for novelty.
+  // Never trade the target difficulty or evidence requirements for novelty.
   const oldest = fresh.length ? -1 : Math.min(...atLevel.map(q => recent.get(q.id) ?? -1));
   const eligible = fresh.length ? fresh : atLevel.filter(q => (recent.get(q.id) ?? -1) === oldest);
   const attempts = (q: Question) => responses.filter(r => r.question.concept === q.concept).length;
   const leastAttempts = Math.min(...eligible.map(attempts));
   const pool = eligible.filter(q => attempts(q) === leastAttempts);
-  // Weight force concepts inside the eligible pool; difficulty, evidence,
+  // Prefer force concepts inside the eligible pool; difficulty, evidence,
   // recent-history and concept-diversity filters still take precedence.
-  const weighted = pool.flatMap(q => Array.from({ length: forceConcepts.has(q.concept) ? 3 : 1 }, () => q));
-  const q = weighted[Math.min(weighted.length - 1, Math.floor(random() * weighted.length))];
+  const forces = pool.filter(q => forceConcepts.has(q.concept));
+  const others = pool.filter(q => !forceConcepts.has(q.concept));
+  const roll = Math.max(0, Math.min(0.999999, random()));
+  // A group probability avoids letting bank size accidentally set the ratio.
+  const forcePick = forces.length > 0 && (!others.length || roll < 0.7);
+  const eligibleGroup = forcePick ? forces : others;
+  const position = forces.length && others.length ? (forcePick ? roll / 0.7 : (roll - 0.7) / 0.3) : roll;
+  const q = eligibleGroup[Math.min(eligibleGroup.length - 1, Math.floor(position * eligibleGroup.length))];
   if (!q) return undefined;
   const order = q.choices.map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {

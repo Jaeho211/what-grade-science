@@ -12,10 +12,10 @@ function play(mask: number, elapsedMs = 12000, random = () => 0.5) {
 }
 
 describe('science question bank', () => {
-  it('has 106 unique, complete, four-choice questions across all four domains', () => {
-    expect(questions).toHaveLength(106);
-    expect(new Set(questions.map(q => q.id)).size).toBe(106);
-    expect(new Set(questions.map(q => q.prompt)).size).toBe(106);
+  it('has 146 unique, complete, four-choice questions across all four domains', () => {
+    expect(questions).toHaveLength(146);
+    expect(new Set(questions.map(q => q.id)).size).toBe(146);
+    expect(new Set(questions.map(q => q.prompt)).size).toBe(146);
     expect(new Set(questions.map(q => q.domain))).toEqual(new Set(DOMAINS));
     for (const q of questions) {
       expect(q.choices).toHaveLength(4);
@@ -43,12 +43,21 @@ describe('science question bank', () => {
 });
 
 describe('ten-question game and evidence', () => {
-  it('finishes every possible right/wrong sequence without duplicates or domain imbalance', () => {
+  it('selects the force group 70% of the time in an eligible opening pool', () => {
+    const forceConcepts = new Set(['힘의 합력', '마찰력', '탄성력', '중력', '용수철과 힘 측정']);
+    let forceCount = 0;
+    for (let i = 0; i < 1000; i++) {
+      const q = nextQuestion([], () => (i + 0.5) / 1000)!;
+      if (forceConcepts.has(q.concept)) forceCount++;
+    }
+    expect(forceCount).toBe(700);
+  });
+
+  it('finishes every possible right/wrong sequence without duplicates or forced domain quotas', () => {
     for (let mask = 0; mask < 1024; mask++) {
       const responses = play(mask);
       expect(new Set(responses.map(r => r.question.id)).size).toBe(TOTAL);
-      for (const d of DOMAINS) expect(responses.filter(r => r.question.domain === d).length).toBeGreaterThanOrEqual(2);
-      expect(responses.filter(r => r.question.domain === '물리')).toHaveLength(3);
+
       expect(nextQuestion(responses)).toBeUndefined();
       const summary = result(responses);
       expect(summary.score).toBe(responses.filter(correct).length);
