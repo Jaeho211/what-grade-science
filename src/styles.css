@@ -183,3 +183,20 @@ summary { min-height: 56px; font-size: 15px; }
 .answered-wrong .answer-mark { color: #a8342b; }
 .review-meta { color: #17665e; }
 @media (max-width: 480px) { .domain-results { grid-template-columns: repeat(2, 1fr); } .quiz .choice { font-size: 16px; gap: 10px; } .answer-mark { font-size: 11px; } }
+
+.records-panel { max-width: 760px; margin: 24px auto; }
+.recent-plays { list-style: none; margin: 20px 0; padding: 0; }
+.recent-plays li { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid #e1e5d9; font-size: 14px; }
+.recent-plays time { color: #6b7c75; flex: 1; min-width: 120px; }
+.record-actions { display: flex; gap: 12px; align-items: center; }
+.record-actions .secondary { width: auto; padding: 12px 20px; }
+.record-actions .skip { margin: 0; }
+.record-stats summary { justify-content: space-between; }
+.stats-scroll { overflow-x: auto; }
+.record-stats table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.6; }
+.record-stats th, .record-stats td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e1e5d9; vertical-align: top; }
+.record-stats td:first-child { min-width: 180px; width: 60%; }
+.record-stats td:not(:first-child) { min-width: 85px; }
+.record-stats small { display: block; color: #6b7c75; margin-top: 4px; }
+.evidence-note { text-align: center; font-size: 13px; line-height: 1.8; color: #38634f; }
+@media (max-width: 480px) { .record-actions { flex-wrap: wrap; } .records-panel .fine { font-size: 12px; } }

@@ -3,6 +3,8 @@ import { createRoundClock, formatTime, QUESTION_SECONDS } from './round-clock';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { correct, nextQuestion, result, streakStats, TOTAL, type Question, type Response } from './quiz';
 import { normalizeHistory, readHistory, rememberQuestion } from './history';
+import { clearRecords, createPlayRecord, normalizeRecords, readRecords, saveRecord } from './records';
+import { RecordsPanel } from './RecordsPanel';
 
 export default function App() {
   const [screen, setScreen] = useState<'intro' | 'quiz' | 'result'>('intro');
@@ -17,12 +19,17 @@ export default function App() {
   const heading = useRef<HTMLHeadingElement>(null);
   const [initialHistory] = useState(readHistory);
   const recent = useRef<string[]>(initialHistory);
+  const [records, setRecords] = useState(readRecords);
+  const sessionId = useRef('');
+  const [recordNotice, setRecordNotice] = useState('');
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [screen, question]);
   function start() {
     if (transition.current) clearTimeout(transition.current);
+    sessionId.current = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setRecordNotice('');
     const stored = readHistory();
     recent.current = normalizeHistory([...stored, ...recent.current]);
     const first = nextQuestion([], Math.random, recent.current);
@@ -39,7 +46,12 @@ export default function App() {
     const updated = [...responses, { question, ...timing, skipped }];
     const advance = () => {
       setResponses(updated); setFeedback(null);
-      if (updated.length === TOTAL) { activeQuestionId.current = null; clock.current = null; setScreen('result'); }
+      if (updated.length === TOTAL) {
+        const saved = saveRecord(normalizeRecords([...readRecords(), ...records]), createPlayRecord(sessionId.current, updated));
+        setRecords(saved.records);
+        setRecordNotice(saved.persisted ? '' : '기기에 저장하지 못했어요. 이번 기록은 아래에서 내려받을 수 있어요.');
+        activeQuestionId.current = null; clock.current = null; setScreen('result');
+      }
       else {
         const next = nextQuestion(updated, Math.random, recent.current);
         if (next) recent.current = rememberQuestion(recent.current, next.id);
@@ -52,7 +64,7 @@ export default function App() {
     setRemaining(clock.current.remaining());
     setFeedback({ selected: timing.selected, timedOut: timing.timedOut, right: correct(response), streak: streakStats(updated).current });
     transition.current = setTimeout(advance, timing.timedOut ? 800 : 400);
-  }, [question, responses]);
+  }, [question, responses, records]);
   useEffect(() => {
     if (screen !== 'quiz' || feedback) return;
     const tick = () => {
@@ -78,6 +90,10 @@ export default function App() {
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) setNotice('공유하지 못했어요. 아래 결과 문구를 직접 복사해주세요.');
     }
+  }
+  function clearPlayRecords() {
+    if (!clearRecords()) return false;
+    setRecords([]); setRecordNotice(''); return true;
   }
   return <div className="shell">
     <header><a className="brand" href="/" aria-label="몇 학년 홈"><span className="brand-mark">몇</span>몇 학년<span className="brand-dot">?</span></a><span className="header-tag">작은 도전, 새로운 발견</span></header>
@@ -112,6 +128,8 @@ export default function App() {
       {screen === 'result' && <section className="results">
         <div className="result-hero"><span className="eyebrow">YOUR SCIENCE MOMENT</span><div className="result-icon">✦</div><h1 ref={heading} tabIndex={-1}>당신의 과학 나이는</h1><p className="grade">{summary.label}</p><p className="lead">{summary.supported ? '여러 영역의 정답으로 확인한 이번 도전 결과예요.' : '학년을 정할 정답 근거가 부족해요. 한 번 더 도전해볼까요?'}</p><span className="score">10문제 중 {summary.score}개 정답 · {formatTime(summary.elapsedMs)}</span><p className="fine">재미로 보는 과학 나이예요. 실제 학년이나 과학 능력을 의미하지 않아요.</p></div>
         <p className="fine center">{summary.supported ? '이번에 푼 문제 기준이에요. 다른 문제에 도전하면 결과가 달라질 수 있어요.' : '서로 다른 세 영역의 정답과 해당 수준의 정답이 더 필요해요.'}</p>
+        {summary.evidence && <p className="evidence-note">{summary.evidence.domains.length}개 영역에서 정답 근거를 확인했어요.
+          {summary.grade! >= 7 && ` ${summary.label} 이상에서 ${summary.evidence.directDomains.length}개 영역을 직접 맞혔어요.`}</p>}
         <p className="best-streak">✨ 최고 연속 정답 <strong>{summary.bestStreak}회</strong></p>
         {summary.skips > 0 && <p className="fine center">건너뛴 문제 {summary.skips}개 · 정답과 해설을 확인해보세요.</p>}
         {summary.timeouts > 0 && <p className="fine center">시간 초과 {summary.timeouts}문제 · 이번엔 조금 더 빠르게!</p>}
@@ -120,6 +138,7 @@ export default function App() {
         {notice.startsWith('공유하지') && <textarea className="share-fallback" readOnly value={shareText} aria-label="복사할 결과 문구" onFocus={e => e.target.select()} />}
         <details className="review"><summary className="review-heading">정답 확인 <span>{TOTAL}문제</span></summary><div>{responses.map((response, i) => <details key={response.question.id}><summary><span className={correct(response) ? 'right' : 'wrong'}>{correct(response) ? '✓' : '−'}</span><span>{i + 1}. {response.question.prompt}</span><span className="expand">＋</span></summary><div className="explanation"><p className="review-meta">{response.question.domain} · {response.question.concept} · {response.question.kind}</p><p>내 답: {response.selected === null ? (response.timedOut ? '시간 초과' : '건너뛰기') : response.question.choices[response.selected]}</p><p><strong>정답: {response.question.choices[response.question.answer]}</strong></p><p>{response.question.explanation}</p></div></details>)}</div></details>
       </section>}
+      {screen !== 'quiz' && <><p className="notice" role="status">{recordNotice}</p><RecordsPanel records={records} onClear={clearPlayRecords} /></>}
       <PwaControls hidden={screen === 'quiz'} />
     </main><footer><span>몇 학년? · 도전하는 재미</span><span>과학 편 / 초3~중3</span></footer>
   </div>;
