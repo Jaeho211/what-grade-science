@@ -48,6 +48,7 @@ describe('ten-question game and evidence', () => {
       const responses = play(mask);
       expect(new Set(responses.map(r => r.question.id)).size).toBe(TOTAL);
       for (const d of DOMAINS) expect(responses.filter(r => r.question.domain === d).length).toBeGreaterThanOrEqual(2);
+      expect(responses.filter(r => r.question.domain === '물리')).toHaveLength(3);
       expect(nextQuestion(responses)).toBeUndefined();
       const summary = result(responses);
       expect(summary.score).toBe(responses.filter(correct).length);

@@ -50,6 +50,10 @@ export function targetGrade(responses: Response[]): number {
   return confirmation;
 }
 
+const forceConcepts = new Set(['힘과 움직임', '무게 비교', '자석의 극', '자석과 물질', '전자석의 극',
+  '힘의 합력', '힘의 평형', '질량과 무게', '관성', '중력', '만유인력', '전기력', '마찰력',
+  '부력', '아르키메데스 원리', '지레의 평형', '탄성력', '용수철과 힘 측정', '힘과 가속도', '질량과 가속도']);
+
 export function nextQuestion(responses: Response[], random = Math.random, recentIds: readonly string[] = []): Question | undefined {
   if (responses.length >= TOTAL) return undefined;
   const used = new Set(responses.map(r => r.question.id));
@@ -57,7 +61,9 @@ export function nextQuestion(responses: Response[], random = Math.random, recent
   const count = (domain: string) => responses.filter(r => r.question.domain === domain).length;
   const minimum = Math.min(...DOMAINS.map(count));
   // Domain balance comes first: every domain appears twice in the first eight questions.
-  const balanced = remaining.filter(q => count(q.domain) === minimum);
+  // Keep two questions per domain, then reserve one bonus slot for physics.
+  const physicsBonus = responses.length >= 8 && count('물리') < 3;
+  const balanced = remaining.filter(q => physicsBonus ? q.domain === '물리' : count(q.domain) === minimum);
   const target = targetGrade(responses);
   const distance = Math.min(...balanced.map(q => Math.abs(q.level - target)));
   let atLevel = balanced.filter(q => Math.abs(q.level - target) === distance);
@@ -77,7 +83,10 @@ export function nextQuestion(responses: Response[], random = Math.random, recent
   const attempts = (q: Question) => responses.filter(r => r.question.concept === q.concept).length;
   const leastAttempts = Math.min(...eligible.map(attempts));
   const pool = eligible.filter(q => attempts(q) === leastAttempts);
-  const q = pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
+  // Weight force concepts inside the eligible pool; difficulty, evidence,
+  // recent-history and concept-diversity filters still take precedence.
+  const weighted = pool.flatMap(q => Array.from({ length: forceConcepts.has(q.concept) ? 3 : 1 }, () => q));
+  const q = weighted[Math.min(weighted.length - 1, Math.floor(random() * weighted.length))];
   if (!q) return undefined;
   const order = q.choices.map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {
