@@ -22,7 +22,7 @@ export function RecordsPanel({ records, onClear }: { records: PlayRecord[]; onCl
     {records.length ? <>
       <ol className="recent-plays">{records.slice(-5).reverse().map(record => <li key={record.id}>
         <time dateTime={record.completedAt}>{new Date(record.completedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time>
-        <strong>{record.grade === null ? '확인 필요' : levelLabel(record.grade)}</strong><span>{record.score} / 10</span>
+        <strong>{levelLabel(record.grade ?? 3)}</strong><span>{record.score} / 10</span>
       </li>)}</ol>
       <div className="record-actions"><button className="secondary" onClick={download}>기록 내려받기</button>
         <button className="skip" onClick={() => setNotice(onClear() ? '도전 기록을 지웠어요.' : '기록을 지우지 못했어요. 다시 시도해주세요.')}>도전 기록 지우기</button></div>

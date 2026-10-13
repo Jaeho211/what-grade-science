@@ -56,7 +56,7 @@ export async function shareImage(record: SharedRecord): Promise<Uint8Array<Array
   }
   await centered('brand',400,22,[101,112,98]);
   await centered('title',400,70);
-  await centered(`grade${record.grade ?? 0}` as GlyphKey,400,122);
+  await centered(`grade${record.grade ?? 3}` as GlyphKey,400,122);
   await centered('scoreLabel',220,238,[101,112,98]);
   await centered('timeLabel',580,238,[101,112,98]);
   await digits(`${record.score} / 10`,220,271);

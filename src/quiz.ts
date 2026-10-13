@@ -5,7 +5,7 @@ export const TOTAL = 10;
 export const START_LEVEL = 5;
 export const MIN_LEVEL = 3;
 export const MAX_LEVEL = 9;
-export const GRADING_VERSION = 'science-evidence-v3';
+export const GRADING_VERSION = 'science-evidence-v4';
 export const correct = (r: Response) => !r.timedOut && !r.skipped && r.selected === r.question.answer;
 export const levelLabel = (level: number) => level <= 6 ? `초등 ${level}학년` : `중학교 ${level - 6}학년`;
 
@@ -132,10 +132,22 @@ export function result(responses: Response[]) {
   for (let level = MAX_LEVEL; level >= MIN_LEVEL; level--) {
     if (levelEvidence(responses, level).qualified) { grade = level; break; }
   }
+  const supported = grade !== null;
+  // When broad evidence is sparse, estimate from repeated successes near a
+  // level. A lone high-level hit must not determine the result.
+  if (grade === null) {
+    grade = MIN_LEVEL;
+    const unique = [...new Map(responses.map(r => [r.question.id, r])).values()];
+    for (let level = MAX_LEVEL; level > MIN_LEVEL; level--) {
+      const attempts = unique.filter(r => r.question.level >= level);
+      const passes = attempts.filter(correct).length;
+      if (passes >= 2 && passes / attempts.length >= 0.6) { grade = level; break; }
+    }
+  }
   return {
-    grade, label: grade === null ? '확인 필요' : levelLabel(grade),
-    supported: grade !== null, score: responses.filter(correct).length,
-    evidence: grade === null ? null : levelEvidence(responses, grade),
+    grade, label: levelLabel(grade),
+    supported, score: responses.filter(correct).length,
+    evidence: supported ? levelEvidence(responses, grade) : null,
     elapsedMs: responses.reduce((sum, r) => sum + (r.elapsedMs ?? 0), 0),
     skips: responses.filter(r => r.skipped).length, timeouts: responses.filter(r => r.timedOut).length,
     bestStreak: streakStats(responses).best,

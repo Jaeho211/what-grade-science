@@ -61,7 +61,7 @@ describe('ten-question game and evidence', () => {
       expect(nextQuestion(responses)).toBeUndefined();
       const summary = result(responses);
       expect(summary.score).toBe(responses.filter(correct).length);
-      if (summary.grade !== null) {
+      {
         expect(summary.grade).toBeGreaterThanOrEqual(3);
         expect(summary.grade).toBeLessThanOrEqual(9);
       }
@@ -71,18 +71,18 @@ describe('ten-question game and evidence', () => {
     expect(result(play(1023)).grade).toBe(9);
     expect(result(play(1023, 3000)).grade).toBe(9);
   });
-  it('does not invent a grade for all-wrong, skipped, timed-out, or empty runs', () => {
+  it('always returns a minimum grade for all-wrong, skipped, timed-out, or empty runs', () => {
     const missed = play(0);
-    expect(result(missed).grade).toBeNull();
-    expect(result([]).grade).toBeNull();
-    expect(result(missed.map(r => ({ ...r, selected: null, skipped: true }))).grade).toBeNull();
+    expect(result(missed).grade).toBe(3);
+    expect(result([]).grade).toBe(3);
+    expect(result(missed.map(r => ({ ...r, selected: null, skipped: true }))).grade).toBe(3);
     expect(result(missed.map(r => ({ ...r, selected: r.question.answer, timedOut: true }))).score).toBe(0);
   });
   it('cannot qualify using only one domain or one lucky high-level answer', () => {
     const physics = questions.filter(q => q.domain === '물리').map(question => ({ question, selected: question.answer }));
-    expect(result(physics).grade).toBeNull();
+    expect(result(physics).supported).toBe(false);
     const top = questions.filter(q => q.level === 9);
-    expect(result([{ question: top[0], selected: top[0].answer }]).grade).toBeNull();
+    expect(result([{ question: top[0], selected: top[0].answer }]).grade).toBe(3);
     const evidence = DOMAINS.slice(0, 3).map(domain => top.find(q => q.domain === domain)!)
       .map(question => ({ question, selected: question.answer, elapsedMs: 19000 }));
     expect(result(evidence).grade).toBe(9);

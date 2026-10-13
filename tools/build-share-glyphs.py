@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 items = {'title':('나의 과학 나이는',28), 'brand':('몇 학년?',22), 'scoreLabel':('정답',20), 'timeLabel':('풀이 시간',20), 'footer':('재미로 보는 결과 · 실제 학년과 달라요',24)}
 for level in range(3,10): items[f'grade{level}']=(f'초등 {level}학년' if level<=6 else f'중학교 {level-6}학년' if level<=9 else f'고등학교 {level-9}학년',64)
 for c in '0123456789 /초': items[f'digit{c}']=(c,38)
-items['grade0']=('확인 필요',64)
+items['grade0']=items['grade3']
 out={}
 for key,(text,size) in items.items():
  font=ImageFont.truetype(sys.argv[1],size)

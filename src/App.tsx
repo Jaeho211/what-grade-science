@@ -133,8 +133,8 @@ export default function App() {
         <p className="fine center">시간이 끝나면 자동으로 넘어가요. 해설은 끝나고 확인!</p>
       </section>}
       {screen === 'result' && <section className="results">
-        <div className="result-hero"><span className="eyebrow">YOUR SCIENCE MOMENT</span><div className="result-icon">✦</div><h1 ref={heading} tabIndex={-1}>당신의 과학 나이는</h1><p className="grade">{summary.label}</p><p className="lead">{summary.supported ? '여러 영역의 정답으로 확인한 이번 도전 결과예요.' : '학년을 정할 정답 근거가 부족해요. 한 번 더 도전해볼까요?'}</p><span className="score">10문제 중 {summary.score}개 정답 · {formatTime(summary.elapsedMs)}</span><p className="fine">재미로 보는 과학 나이예요. 실제 학년이나 과학 능력을 의미하지 않아요.</p></div>
-        <p className="fine center">{summary.supported ? '이번에 푼 문제 기준이에요. 다른 문제에 도전하면 결과가 달라질 수 있어요.' : '서로 다른 세 영역의 정답과 해당 수준의 정답이 더 필요해요.'}</p>
+        <div className="result-hero"><span className="eyebrow">YOUR SCIENCE MOMENT</span><div className="result-icon">✦</div><h1 ref={heading} tabIndex={-1}>당신의 과학 나이는</h1><p className="grade">{summary.label}</p><p className="lead">이번 도전에서 나온 과학 나이예요.</p><span className="score">10문제 중 {summary.score}개 정답 · {formatTime(summary.elapsedMs)}</span><p className="fine">재미로 보는 과학 나이예요. 실제 학년이나 과학 능력을 의미하지 않아요.</p></div>
+        <p className="fine center">다른 문제에도 도전해서 과학 나이를 높여보세요!</p>
         {summary.evidence && <p className="evidence-note">{summary.evidence.domains.length}개 영역에서 정답 근거를 확인했어요.
           {summary.grade! >= 7 && ` ${summary.label} 이상에서 ${summary.evidence.directDomains.length}개 영역을 직접 맞혔어요.`}</p>}
         <p className="best-streak">✨ 최고 연속 정답 <strong>{summary.bestStreak}회</strong></p>

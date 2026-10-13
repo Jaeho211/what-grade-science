@@ -36,7 +36,7 @@ describe('20-second round clock', () => {
     }
     expect(nextQuestion(responses)).toBeUndefined();
     expect(targetGrade(responses)).toBe(3);
-    expect(result(responses)).toMatchObject({ grade: null, timeouts: 10, elapsedMs: 200000, score: 0 });
+    expect(result(responses)).toMatchObject({ grade: 3, timeouts: 10, elapsedMs: 200000, score: 0 });
     expect(formatTime(84000)).toBe('1분 24초');
   });
 });
